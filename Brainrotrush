@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BRAINROT RUSH mini app</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter & Press Start 2P for voxel vibe -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brainrot: {
+                            bg: '#0c0a15',
+                            card: '#141125',
+                            border: '#272242',
+                            accent: '#8b5cf6',
+                            gold: '#f59e0b',
+                            green: '#10b981',
+                            red: '#ef4444'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        pixel: ['"Press Start 2P"', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #06050a;
+            color: #f3f4f6;
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0c0a15;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #272242;
+            border-radius: 4px;
+        }
+
+        .neon-glow-purple {
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.35);
+        }
+        .neon-glow-gold {
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+        }
+
+        @keyframes marquee {
+            0% { transform: translateX(0%); }
+            100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+            display: flex;
+            width: 200%;
+            animation: marquee 25s linear infinite;
+        }
+        .animate-marquee:hover {
+            animation-play-state: paused;
+        }
+
+        .roulette-container {
+            overflow: hidden;
+            position: relative;
+        }
+        .roulette-tape {
+            display: flex;
+            transition: transform 3s cubic-bezier(0.1, 0.9, 0.2, 1.0);
+            will-change: transform;
+        }
+    </style>
+</head>
+<body class="flex justify-center min-h-screen">
+
+    <div id="app" class="w-full max-w-[450px] bg-brainrot-bg flex flex-col min-h-screen relative shadow-2xl border-x border-brainrot-border pb-16 overflow-x-hidden">
+        
+        <!-- HEADER SECTION -->
+        <header class="sticky top-0 z-40 bg-brainrot-bg/95 backdrop-blur-md px-3 py-2.5 border-b border-brainrot-border flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-purple-600 to-amber-500 flex items-center justify-center font-bold text-xs shadow-md">
+                    ⚡
+                </div>
+                <div>
+                    <h1 class="text-xs font-black tracking-wider text-white uppercase font-pixel leading-tight">BRAINROT RUSH</h1>
+                    <span class="text-[9px] text-purple-400 font-semibold tracking-wide">mini app</span>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <!-- Balance Pill -->
+                <div class="bg-brainrot-card border border-brainrot-border rounded-full pl-2 pr-1 py-1 flex items-center space-x-1.5 shadow-inner">
+                    <span class="text-xs">🪙</span>
+                    <span id="user-balance" class="text-xs font-bold text-amber-300 font-mono">100.00</span>
+                    <button onclick="switchTab('deposit')" class="w-5 h-5 rounded-full bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center justify-center transition shadow-md">
+                        +
+                    </button>
+                </div>
+
+                <!-- Admin Button -->
+                <button id="admin-trigger-btn" onclick="openAdminModal()" class="hidden w-7 h-7 rounded-lg bg-red-600/30 border border-red-500 text-red-400 text-xs flex items-center justify-center hover:bg-red-600 hover:text-white transition" title="Админ-панель">
+                    ⚙️
+                </button>
+
+                <!-- Settings Button -->
+                <button onclick="openSettings()" class="w-7 h-7 rounded-lg bg-brainrot-card border border-brainrot-border text-gray-400 hover:text-white text-xs flex items-center justify-center transition">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- LIVE DROP FEED MARQUEE -->
+        <div class="bg-brainrot-card/60 border-b border-brainrot-border py-1.5 px-2 overflow-hidden flex items-center relative">
+            <div class="z-10 bg-brainrot-card pr-2 flex items-center space-x-1 border-r border-brainrot-border text-[10px] font-bold text-red-500 whitespace-nowrap">
+                <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                <span>● LIVE</span>
+            </div>
+            <div class="overflow-hidden w-full relative">
+                <div id="live-marquee" class="animate-marquee flex items-center space-x-3 text-xs pl-2"></div>
+            </div>
+        </div>
+
+        <!-- MAIN VIEW PORT -->
+        <main id="main-content" class="flex-1 p-3 space-y-4 overflow-y-auto">
+            
+            <!-- ACCORDION / NAV NAVIGATION MATRIX -->
+            <div class="space-y-1.5">
+                <!-- GAME MODES COLLAPSIBLE -->
+                <button onclick="toggleAccordion('menu-modes')" class="w-full bg-brainrot-card hover:bg-brainrot-border/50 border border-brainrot-border p-2.5 rounded-xl flex items-center justify-between text-xs font-bold text-gray-200 transition">
+                    <div class="flex items-center space-x-2">
+                        <span>🎮</span>
+                        <span>Игровые режимы</span>
+                    </div>
+                    <span id="arrow-menu-modes" class="text-purple-400 text-xs transition-transform duration-200">▼</span>
+                </button>
+
+                <div id="menu-modes" class="grid grid-cols-2 gap-2 pt-1">
+                    <button onclick="openGameModal('upgrade')" class="bg-gradient-to-br from-purple-900/40 to-brainrot-card border border-purple-500/30 p-2.5 rounded-xl text-left hover:border-purple-500 transition">
+                        <div class="text-lg mb-1">🎡</div>
+                        <div class="text-xs font-bold text-purple-200">АПГРЕЙД</div>
+                        <div class="text-[9px] text-purple-400">Колесо удачи</div>
+                    </button>
+                    <button onclick="openGameModal('crash')" class="bg-gradient-to-br from-red-900/40 to-brainrot-card border border-red-500/30 p-2.5 rounded-xl text-left hover:border-red-500 transition">
+                        <div class="text-lg mb-1">🚀</div>
+                        <div class="text-xs font-bold text-red-200">РАКЕТА</div>
+                        <div class="text-[9px] text-red-400">Crash множитель</div>
+                    </button>
+                    <button onclick="openGameModal('mines')" class="bg-gradient-to-br from-amber-900/40 to-brainrot-card border border-amber-500/30 p-2.5 rounded-xl text-left hover:border-amber-500 transition">
+                        <div class="text-lg mb-1">💣</div>
+                        <div class="text-xs font-bold text-amber-200">МИНЫ</div>
+                        <div class="text-[9px] text-amber-400">Сетка 5x5</div>
+                    </button>
+                    <button onclick="openGameModal('fuse')" class="bg-gradient-to-br from-emerald-900/40 to-brainrot-card border border-emerald-500/30 p-2.5 rounded-xl text-left hover:border-emerald-500 transition">
+                        <div class="text-lg mb-1">🧬</div>
+                        <div class="text-xs font-bold text-emerald-200">ФЬЮЗ</div>
+                        <div class="text-[9px] text-emerald-400">Синтез петов</div>
+                    </button>
+                    <button onclick="openGameModal('tower')" class="bg-gradient-to-br from-blue-900/40 to-brainrot-card border border-blue-500/30 p-2.5 rounded-xl text-left hover:border-blue-500 transition">
+                        <div class="text-lg mb-1">🏰</div>
+                        <div class="text-xs font-bold text-blue-200">БАШНЯ</div>
+                        <div class="text-[9px] text-blue-400">Поднимайся выше</div>
+                    </button>
+                    <button onclick="openGameModal('cubes')" class="bg-gradient-to-br from-pink-900/40 to-brainrot-card border border-pink-500/30 p-2.5 rounded-xl text-left hover:border-pink-500 transition">
+                        <div class="text-lg mb-1">🎲</div>
+                        <div class="text-xs font-bold text-pink-200">КУБИКИ</div>
+                        <div class="text-[9px] text-pink-400">Угадай цвет</div>
+                    </button>
+                    <button onclick="openGameModal('battles')" class="col-span-2 bg-gradient-to-br from-indigo-900/40 to-brainrot-card border border-indigo-500/30 p-2.5 rounded-xl text-left hover:border-indigo-500 transition flex items-center justify-between">
+                        <div>
+                            <div class="text-xs font-bold text-indigo-200">⚔️ БАТЛЫ (PvP Coinflip)</div>
+                            <div class="text-[9px] text-indigo-400">Sigma vs Skibidi Toilet</div>
+                        </div>
+                        <span class="text-xs px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold">1v1 BOT</span>
+                    </button>
+                </div>
+
+                <!-- ADDITIONAL NAVIGATION SECTIONS -->
+                <button onclick="showToast('Ферма обновлена! UPD!')" class="w-full bg-brainrot-card border border-brainrot-border p-2.5 rounded-xl flex items-center justify-between text-xs font-bold text-gray-200">
+                    <div class="flex items-center space-x-2">
+                        <span>🌱</span>
+                        <span>Ферма</span>
+                    </div>
+                    <span class="text-[9px] bg-green-500/20 text-green-300 font-bold px-1.5 py-0.5 rounded border border-green-500/30">UPD!</span>
+                </button>
+
+                <button onclick="showToast('Хэллоуин ивент активен! NEW!')" class="w-full bg-brainrot-card border border-brainrot-border p-2.5 rounded-xl flex items-center justify-between text-xs font-bold text-gray-200">
+                    <div class="flex items-center space-x-2">
+                        <span>🎃</span>
+                        <span>Хэллоуин-ивент</span>
+                    </div>
+                    <span class="text-[9px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded border border-amber-500/30">NEW!</span>
+                </button>
+            </div>
+
+            <!-- TAB 1: SHOP (7 CASES) -->
+            <section id="tab-shop" class="tab-page space-y-3">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xs font-bold text-gray-300 uppercase tracking-wider font-pixel flex items-center gap-1.5">
+                        <span>📦</span> Магазин Кейсов (7)
+                    </h2>
+                    <span class="text-[10px] text-purple-400">Шансы 100% честные</span>
+                </div>
+
+                <div id="cases-grid" class="space-y-3"></div>
+            </section>
+
+            <!-- TAB 2: DEPOSIT (ROBLOX SKINS TRADE-IN) -->
+            <section id="tab-deposit" class="tab-page hidden space-y-3">
+                <div class="bg-brainrot-card border border-purple-500/40 p-3 rounded-xl relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h2 class="text-sm font-bold text-purple-200 flex items-center gap-1">
+                                <span>📥</span> Депозит Брейнротами
+                            </h2>
+                            <p class="text-[10px] text-gray-400 leading-tight mt-1">
+                                Выбери одного или сразу несколько — отдашь их одним трейдом в Roblox, стоимость зачислится монетами после приёма.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="bg-purple-950/60 border border-purple-500/50 p-2 rounded-lg flex items-center justify-between mt-2">
+                        <span class="text-xs font-bold text-purple-200">
+                            Выбрано: <span id="deposit-selected-count" class="text-amber-400">0</span>
+                        </span>
+                        <button onclick="submitDepositRequest()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-md transition flex items-center gap-1">
+                            <span>Продолжить</span>
+                            <span>➔</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2" id="deposit-items-grid"></div>
+            </section>
+
+            <!-- TAB 3: INVENTORY & PROFILE -->
+            <section id="tab-profile" class="tab-page hidden space-y-3">
+                <div class="bg-brainrot-card border border-brainrot-border p-3 rounded-xl space-y-2">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center text-xl font-bold border border-white/20">
+                            😎
+                        </div>
+                        <div>
+                            <h3 id="user-display-name" class="text-xs font-bold text-white font-mono">@Dobro42O</h3>
+                            <div class="text-[10px] text-gray-400 mt-0.5">ID: <span class="font-mono">8472910</span></div>
+                            <div class="inline-block px-2 py-0.5 rounded text-[9px] bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30 mt-1">
+                                Игрок Brainrot Rush
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-brainrot-border/60 flex justify-between items-center">
+                        <span class="text-[10px] text-gray-400">Режим тестирования админки:</span>
+                        <button onclick="toggleAdminOverride()" class="text-[10px] px-2 py-1 bg-red-950 border border-red-500/50 text-red-300 rounded font-bold">
+                            🔓 Переключить Admin Mode
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-xs font-bold text-gray-300 uppercase">Склад Петов (<span id="inventory-count">0</span>)</h3>
+                        <button onclick="sellAllInventory()" class="text-[10px] text-amber-400 hover:underline">Продать всё</button>
+                    </div>
+                    <div id="inventory-grid" class="grid grid-cols-2 gap-2"></div>
+                </div>
+            </section>
+        </main>
+
+        <!-- BOTTOM NAVBAR -->
+        <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[450px] bg-brainrot-bg/95 backdrop-blur-lg border-t border-brainrot-border grid grid-cols-5 py-2 z-40 text-center">
+            <button onclick="switchTab('shop')" id="nav-shop" class="flex flex-col items-center justify-center text-purple-400 font-bold">
+                <span class="text-base">🛒</span>
+                <span class="text-[9px] mt-0.5">Магазин</span>
+            </button>
+            <button onclick="switchTab('deposit')" id="nav-deposit" class="flex flex-col items-center justify-center text-gray-400 hover:text-gray-200">
+                <span class="text-base">📥</span>
+                <span class="text-[9px] mt-0.5">Депозит</span>
+            </button>
+            <button onclick="toggleAccordion('menu-modes'); window.scrollTo({top:0, behavior:'smooth'})" class="flex flex-col items-center justify-center text-amber-400 font-bold">
+                <div class="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-sm shadow-lg -mt-3">
+                    ⚡
+                </div>
+                <span class="text-[9px] mt-0.5">Игры</span>
+            </button>
+            <button onclick="switchTab('profile')" id="nav-profile" class="flex flex-col items-center justify-center text-gray-400 hover:text-gray-200">
+                <span class="text-base">🎒</span>
+                <span class="text-[9px] mt-0.5">Склад</span>
+            </button>
+            <button onclick="openAdminModal()" id="nav-admin" class="hidden flex-col items-center justify-center text-red-400 hover:text-red-300">
+                <span class="text-base">⚙️</span>
+                <span class="text-[9px] mt-0.5">Админка</span>
+            </button>
+        </nav>
+
+        <!-- MODAL 1: CASE OPENING ROULETTE WINDOW -->
+        <div id="modal-case-opening" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex flex-col justify-center items-center p-4">
+            <div class="w-full max-w-sm bg-brainrot-card border border-purple-500/40 rounded-2xl p-4 space-y-4 shadow-2xl relative">
+                <div class="flex justify-between items-center border-b border-brainrot-border pb-2">
+                    <h3 id="opening-case-title" class="text-xs font-bold text-purple-200 font-pixel uppercase">Открытие кейса</h3>
+                    <button onclick="closeCaseModal()" class="text-gray-400 hover:text-white text-base">✕</button>
+                </div>
+
+                <div class="roulette-container h-28 bg-brainrot-bg border-2 border-purple-500/60 rounded-xl relative flex items-center">
+                    <div class="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-1 bg-amber-400 z-20 shadow-[0_0_10px_#f59e0b]"></div>
+                    <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-amber-400 rotate-45 z-20"></div>
+                    
+                    <div id="roulette-tape" class="roulette-tape px-40"></div>
+                </div>
+
+                <div class="flex justify-between items-center gap-2">
+                    <div class="flex space-x-1">
+                        <button onclick="setMultiplier(1)" id="mult-1" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-600 text-white border border-purple-400">x1</button>
+                        <button onclick="setMultiplier(3)" id="mult-3" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-brainrot-bg text-gray-400 border border-brainrot-border">x3</button>
+                        <button onclick="setMultiplier(5)" id="mult-5" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-brainrot-bg text-gray-400 border border-brainrot-border">x5</button>
+                    </div>
+
+                    <button onclick="toggleFastSpin()" id="btn-speed-toggle" class="px-3 py-1 rounded-lg text-xs font-bold bg-brainrot-bg text-amber-400 border border-amber-500/30">
+                        ⚡ Медленно
+                    </button>
+                </div>
+
+                <button onclick="spinRoulette()" id="btn-spin-action" class="w-full bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-400 hover:to-purple-500 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider shadow-lg transition transform active:scale-95">
+                    Крутить за <span id="spin-cost-display">100</span> 🪙
+                </button>
+            </div>
+        </div>
+
+        <!-- MODAL 2: CASE REWARD WIN POPUP -->
+        <div id="modal-reward-win" class="fixed inset-0 bg-black/90 backdrop-blur-lg z-50 hidden flex flex-col justify-center items-center p-4">
+            <div class="w-full max-w-xs bg-brainrot-card border border-amber-500/60 rounded-2xl p-4 text-center space-y-3 shadow-[0_0_30px_rgba(245,158,11,0.2)]">
+                <div class="text-xs font-bold text-amber-400 uppercase tracking-widest font-pixel">🎉 Поздравляем! 🎉</div>
+                
+                <div class="py-2 flex justify-center">
+                    <div id="win-pet-card" class="w-28 h-28 bg-brainrot-bg border-2 border-amber-400 rounded-xl p-2 flex flex-col items-center justify-center shadow-lg">
+                        <div id="win-pet-svg" class="w-16 h-16 flex items-center justify-center"></div>
+                        <div id="win-pet-name" class="text-xs font-bold text-white mt-1 truncate max-w-full"></div>
+                    </div>
+                </div>
+
+                <div class="text-xs text-gray-300">
+                    Ценность: <span id="win-pet-value" class="font-bold text-amber-300">0</span> 🪙
+                </div>
+
+                <div class="space-y-2 pt-2">
+                    <button onclick="claimWonPetToInventory()" class="w-full bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold py-2.5 rounded-xl shadow-md transition">
+                        📦 Забрать на склад
+                    </button>
+                    <button onclick="sellWonPetImmediately()" id="btn-sell-win" class="w-full bg-brainrot-bg hover:bg-brainrot-border border border-amber-500/50 text-amber-300 text-xs font-bold py-2.5 rounded-xl transition">
+                        Продать сразу за 100 🪙
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL 3: ADMIN SYSTEM (@Dobro42O) -->
+        <div id="modal-admin" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex flex-col p-4 overflow-y-auto">
+            <div class="w-full max-w-sm mx-auto bg-brainrot-card border border-red-500/60 rounded-2xl p-4 space-y-4 shadow-2xl">
+                <div class="flex justify-between items-center border-b border-red-500/30 pb-2">
+                    <h3 class="text-xs font-bold text-red-400 uppercase font-pixel flex items-center gap-1.5">
+                        <span>⚙️</span> Панель Администратора
+                    </h3>
+                    <button onclick="closeAdminModal()" class="text-gray-400 hover:text-white text-base">✕</button>
+                </div>
+
+                <div class="text-[10px] text-gray-400">
+                    Авторизован как: <span class="text-red-300 font-bold">@Dobro42O</span>
+                </div>
+
+                <!-- ADMIN SECTION 1: PROMO CODE GENERATOR -->
+                <div class="bg-brainrot-bg border border-brainrot-border p-3 rounded-xl space-y-2">
+                    <h4 class="text-xs font-bold text-purple-300">🎟️ Генератор Промокодов</h4>
+                    <input type="text" id="admin-promo-name" placeholder="Название (например BRAIN2026)" class="w-full bg-brainrot-card border border-brainrot-border rounded px-2 py-1 text-xs text-white">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" id="admin-promo-coins" placeholder="Монеты" class="bg-brainrot-card border border-brainrot-border rounded px-2 py-1 text-xs text-white">
+                        <input type="number" id="admin-promo-uses" placeholder="Кол-во активаций" class="bg-brainrot-card border border-brainrot-border rounded px-2 py-1 text-xs text-white">
+                    </div>
+                    <button onclick="createAdminPromo()" class="w-full bg-purple-600 text-white text-xs font-bold py-1.5 rounded hover:bg-purple-500 transition">
+                        Создать Промокод
+                    </button>
+                </div>
+
+                <!-- ADMIN SECTION 2: GRANT PET TOOL -->
+                <div class="bg-brainrot-bg border border-brainrot-border p-3 rounded-xl space-y-2">
+                    <h4 class="text-xs font-bold text-amber-300">🎁 Выдача Брейнрота Игроку</h4>
+                    <input type="text" id="admin-grant-target" placeholder="Никнейм игрока (@username)" class="w-full bg-brainrot-card border border-brainrot-border rounded px-2 py-1 text-xs text-white">
+                    <select id="admin-grant-pet-select" class="w-full bg-brainrot-card border border-brainrot-border rounded px-2 py-1 text-xs text-white"></select>
+                    <button onclick="grantPetToUser()" class="w-full bg-amber-600 text-white text-xs font-bold py-1.5 rounded hover:bg-amber-500 transition">
+                        Выдать Пета в Инвентарь
+                    </button>
+                </div>
+
+                <!-- ADMIN SECTION 3: ROBLOX TRADE MONITOR -->
+                <div class="bg-brainrot-bg border border-brainrot-border p-3 rounded-xl space-y-2">
+                    <h4 class="text-xs font-bold text-red-300">📦 Запросы на Пополнение (Roblox-Трейды)</h4>
+                    <div id="admin-trade-requests" class="space-y-2 max-h-40 overflow-y-auto pr-1"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL 4: DEPOSIT TELEGRAM REDIRECT -->
+        <div id="modal-deposit-confirm" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex flex-col justify-center items-center p-4">
+            <div class="w-full max-w-xs bg-brainrot-card border border-purple-500/60 rounded-2xl p-4 text-center space-y-3 shadow-2xl">
+                <div class="text-xs font-bold text-purple-300 uppercase font-pixel">Депозит Трейдом</div>
+                <p class="text-xs text-gray-300 leading-relaxed">
+                    Чтобы завершить депозит и передать выбранных брейнротов трейдом в Roblox, напишите нашему главному администратору...
+                </p>
+                <div class="py-2 bg-brainrot-bg rounded-lg border border-brainrot-border text-xs text-amber-300 font-mono">
+                    Сумма пополнения: <span id="deposit-modal-total">0</span> 🪙
+                </div>
+                <a href="https://t.me/Dobro42O" target="_blank" onclick="confirmDepositSent()" class="block w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold py-3 rounded-xl shadow-lg transition">
+                    💬 НАПИСАТЬ АДМИНИСТРАТОРУ
+                </a>
+                <button onclick="closeDepositModal()" class="text-xs text-gray-400 hover:underline">Отмена</button>
+            </div>
+        </div>
+
+        <!-- MODAL HOST FOR MINI GAMES -->
+        <div id="modal-game" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex flex-col justify-center items-center p-4">
+            <div id="game-modal-body" class="w-full max-w-sm bg-brainrot-card border border-purple-500/50 rounded-2xl p-4 space-y-4 shadow-2xl relative"></div>
+        </div>
+
+        <!-- TOAST NOTIFICATION -->
+        <div id="toast" class="fixed top-12 left-1/2 -translate-x-1/2 z-50 hidden bg-purple-900/90 border border-purple-400 text-white text-xs px-4 py-2 rounded-full shadow-2xl transition-all">
+            <span id="toast-text">Уведомление</span>
+        </div>
+
+    </div>
+
+    <script>
+        const PETS = [
+            { id: 'burguro', name: 'Burguro and...', price: 103.5, rarity: 'common', svg: `<svg viewBox="0 0 40 40" class="w-full h-full"><rect x="10" y="15" width="20" height="15" fill="#d97706" rx="2"/><rect x="8" y="20" width="24" height="4" fill="#ef4444"/><rect x="12" y="10" width="16" height="5" fill="#f59e0b" rx="2"/><circle cx="16" cy="18" r="1.5" fill="#fff"/><circle cx="24" cy="18" r="1.5" fill="#fff"/></svg>` },
+            { id: 'pegasus', name: 'Celestial Pegasus', price: 155.25, rarity: 'rare', svg: `<svg viewBox="0 0 40 40" class="w-full h-full"><polygon points="20,5 25,18 38,18 27,26 31,38 20,30 9,38 13,26 2,18 15,18" fill="#c084fc"/><rect x="16" y="16" width="8" height="12" fill="#e9d5ff" rx="1"/></svg>` },
+            { id: 'cerberus', name: 'Cerberus', price: 155.25, rarity: 'epic', svg: `<svg viewBox="0 0 40 40" class="w-full h-full"><rect x="6" y="12" width="8" height="10" fill="#dc2626"/><rect x="16" y="8" width="8" height="12" fill="#b91c1c"/><rect x="26" y="12" width="8" height="10" fill="#dc2626"/><rect x="10" y="22" width="20" height="10" fill="#7f1d1d"/><circle cx="20" cy="12" r="1" fill="#f59e0b"/></svg>` },
+            { id: 'capitano', name: 'Capitano Moby', price: 120.75, rarity: 'rare', svg: `<svg viewBox="0 0 40 40" class="w-full h-full"><path d="M5 22 Q20 10 35 22 L30 30 L10 30 Z" fill="#2563eb"/><rect x="15" y="8" width="10" height="8" fill="#1e293b" rx="1"/><circle cx="17" cy="20" r="1.5" fill="#fff"/></svg>` },
+            { id: 'garama', name: 'Garama and Madundung', price: 45.0, rarity: 'common', svg: `<svg viewBox="0 0 40 40" class="w-full h-full"><rect x="12" y="10" width="7" height="20" fill="#059669"/><rect x="21" y="14" width="7" height="16" fill="#10b981"/><circle cx="15" cy="14" r="1" fill="#fff"/><circle cx="24" cy="18" r="1" fill="#fff"/></svg>` },
+            { id: 'dragon_canneloni', name: 'Dragon Canneloni', price: 940.0, rarity: 'legendary', svg: `<svg viewBox="0 0 40 40" class="w-full h-full"><path d="M8 28 L15 10 L25 10 L32 28 Z" fill="#d97706"/><circle cx="20" cy="14" r="3" fill="#ef4444"/><polygon points="20,4 23,9 17,9" fill="#f59e0b"/></svg>` },
+            { id: 'skibidi', name: 'Skibidi Toilet', price: 14280.0, rarity: 'mythic', svg: `<svg viewBox="0 0 40 40" class="w-full h-full"><rect x="12" y="18" width="16" height="16" fill="#f3f4f6" rx="3"/><rect x="15" y="8" width="10" height="12" fill="#e5e7eb" rx="1"/><circle cx="20" cy="14" r="2.5" fill="#fca5a5"/></svg>` },
+            { id: 'antonio', name: 'Antonio', price: 5040.0, rarity: 'epic', svg: `<svg viewBox="0 0 40 40" class="w-full h-full"><rect x="14" y="8" width="12" height="24" fill="#047857" rx="2"/><rect x="16" y="4" width="8" height="4" fill="#10b981"/><circle cx="18" cy="12" r="1.5" fill="#fff"/><circle cx="22" cy="12" r="1.5" fill="#fff"/></svg>` }
+        ];
+
+        const CASES = [
+            { id: 'comeback', name: 'COMEBACK CASE', subtitle: 'Главный кейс с высокой окупаемостью', price: 100, color: 'from-amber-600 to-purple-800', boxSvg: `<svg viewBox="0 0 60 60" class="w-16 h-16"><rect x="10" y="20" width="40" height="30" fill="#78350f" rx="3"/><rect x="8" y="14" width="44" height="10" fill="#b45309" rx="2"/><rect x="26" y="24" width="8" height="10" fill="#f59e0b"/><circle cx="30" cy="29" r="2" fill="#000"/></svg>` },
+            { id: 'friends', name: 'КЕЙС ЗА ПОДПИСКУ', subtitle: 'Подпишись на наш канал и получай кейс каждые 12 часов', price: 0, color: 'from-amber-500 to-yellow-600', boxSvg: `<svg viewBox="0 0 60 60" class="w-16 h-16"><rect x="10" y="20" width="40" height="30" fill="#ca8a04" rx="3"/><circle cx="30" cy="15" r="8" fill="#facc15"/><rect x="27" y="24" width="6" height="8" fill="#854d0e"/></svg>` },
+            { id: 'referral', name: 'РЕФЕРАЛЬНЫЙ КЕЙС', subtitle: 'Используй код реферала чтобы получить кейс', price: 0, color: 'from-orange-600 to-amber-700', boxSvg: `<svg viewBox="0 0 60 60" class="w-16 h-16"><rect x="10" y="20" width="40" height="30" fill="#ea580c" rx="3"/><rect x="12" y="22" width="36" height="6" fill="#9a3412"/><rect x="27" y="28" width="6" height="8" fill="#fff"/></svg>` },
+            { id: 'nickname', name: 'КЕЙС ЗА НИК', subtitle: 'Добавь к имени @FarmBrainrots_bot и получай кейс', price: 0, color: 'from-purple-700 to-indigo-900', boxSvg: `<svg viewBox="0 0 60 60" class="w-16 h-16"><rect x="10" y="20" width="40" height="30" fill="#6b21a8" rx="3"/><path d="M20 14 L30 5 L40 14 Z" fill="#f59e0b"/><circle cx="30" cy="30" r="3" fill="#e9d5ff"/></svg>` },
+            { id: 'werewolf', name: 'ОБОРОТЕНЬ (Кейс 5)', subtitle: 'Мистический воксельный кейс оборотня', price: 99, color: 'from-purple-900 to-slate-900', boxSvg: `<svg viewBox="0 0 60 60" class="w-16 h-16"><rect x="10" y="20" width="40" height="30" fill="#3b0764" rx="3"/><circle cx="30" cy="28" r="6" fill="#a855f7"/></svg>` },
+            { id: 'dracula', name: 'ДРАКУЛА (Кейс 6)', subtitle: 'Вампирская сокровищница', price: 249, color: 'from-red-900 to-red-950', boxSvg: `<svg viewBox="0 0 60 60" class="w-16 h-16"><rect x="10" y="20" width="40" height="30" fill="#7f1d1d" rx="3"/><rect x="8" y="14" width="44" height="8" fill="#991b1b"/></svg>` },
+            { id: 'pumpkin', name: 'ТЫКВА (Кейс 7)', subtitle: 'Хэллоуинский эксклюзивный кейс', price: 479, color: 'from-orange-600 to-red-800', boxSvg: `<svg viewBox="0 0 60 60" class="w-16 h-16"><rect x="10" y="20" width="40" height="30" fill="#c2410c" rx="3"/><circle cx="30" cy="30" r="7" fill="#f97316"/></svg>` }
+        ];
+
+        let STATE = {
+            user: { username: '@Dobro42O', balance: 100.0, inventory: [] },
+            adminOverride: false,
+            depositSelected: [],
+            activeOpening: null,
+            multiplier: 1,
+            fastSpin: false,
+            tradeRequests: []
+        };
+
+        window.onload = function() {
+            if (window.Telegram?.WebApp?.initDataUnsafe?.user?.username) {
+                STATE.user.username = '@' + window.Telegram.WebApp.initDataUnsafe.user.username;
+            }
+            document.getElementById('user-display-name').innerText = STATE.user.username;
+            checkAdminAccess();
+            renderCases();
+            renderDepositItems();
+            renderInventory();
+            initLiveMarquee();
+            updateBalanceUI();
+        };
+
+        function checkAdminAccess() {
+            const isTargetAdmin = STATE.user.username.toLowerCase() === '@dobro42o' || STATE.adminOverride;
+            const adminBtn = document.getElementById('admin-trigger-btn');
+            const adminNav = document.getElementById('nav-admin');
+            if (isTargetAdmin) {
+                adminBtn.classList.remove('hidden');
+                adminNav.classList.remove('hidden');
+                adminNav.classList.add('flex');
+            } else {
+                adminBtn.classList.add('hidden');
+                adminNav.classList.add('hidden');
+                adminNav.classList.remove('flex');
+            }
+        }
+
+        function toggleAdminOverride() {
+            STATE.adminOverride = !STATE.adminOverride;
+            checkAdminAccess();
+            showToast(STATE.adminOverride ? "Админ режим: Включен" : "Админ режим: Выключен");
+        }
+
+        function updateBalanceUI() {
+            document.getElementById('user-balance').innerText = STATE.user.balance.toFixed(2);
+        }
+
+        function renderCases() {
+            const container = document.getElementById('cases-grid');
+            container.innerHTML = CASES.map(c => `
+                <div class="bg-gradient-to-r ${c.color} p-3 rounded-2xl border border-white/10 shadow-lg flex items-center justify-between relative overflow-hidden">
+                    <div class="space-y-1 z-10 max-w-[60%]">
+                        <h3 class="text-xs font-bold text-white uppercase font-pixel tracking-wide">${c.name}</h3>
+                        <p class="text-[9px] text-gray-200 leading-snug">${c.subtitle}</p>
+                        <div class="pt-1">
+                            <button onclick="prepareCaseOpen('${c.id}')" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition uppercase">
+                                ${c.price > 0 ? `ОТКРЫТЬ ЗА ${c.price} 🪙` : 'ОТКРЫТЬ КЕЙС'}
+                            </button>
+                        </div>
+                    </div>
+                    <div class="z-10 drop-shadow-xl">${c.boxSvg}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderDepositItems() {
+            const container = document.getElementById('deposit-items-grid');
+            container.innerHTML = PETS.map(pet => {
+                const isSelected = STATE.depositSelected.includes(pet.id);
+                return `
+                    <div onclick="toggleDepositSelect('${pet.id}')" class="bg-brainrot-card border ${isSelected ? 'border-amber-400 bg-amber-950/20' : 'border-brainrot-border'} rounded-xl p-2.5 relative cursor-pointer hover:border-purple-500 transition flex flex-col items-center">
+                        <div class="absolute top-1 right-1 bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[8px] font-bold px-1.5 py-0.5 rounded">+15%</div>
+                        <div class="w-12 h-12 my-1">${pet.svg}</div>
+                        <div class="text-xs font-bold text-white truncate w-full text-center">${pet.name}</div>
+                        <div class="text-[10px] text-amber-300 font-mono mt-0.5">${pet.price} 🪙</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleDepositSelect(petId) {
+            const idx = STATE.depositSelected.indexOf(petId);
+            if (idx > -1) STATE.depositSelected.splice(idx, 1);
+            else STATE.depositSelected.push(petId);
+            document.getElementById('deposit-selected-count').innerText = STATE.depositSelected.length;
+            renderDepositItems();
+        }
+
+        function renderInventory() {
+            const container = document.getElementById('inventory-grid');
+            document.getElementById('inventory-count').innerText = STATE.user.inventory.length;
+            if (STATE.user.inventory.length === 0) {
+                container.innerHTML = `<div class="col-span-2 text-center text-xs text-gray-500 py-6">Склад пуст. Открывайте кейсы!</div>`;
+                return;
+            }
+            container.innerHTML = STATE.user.inventory.map((item, index) => `
+                <div class="bg-brainrot-card border border-brainrot-border p-2 rounded-xl flex flex-col items-center relative">
+                    <div class="w-12 h-12">${item.svg}</div>
+                    <div class="text-xs font-bold text-white truncate w-full text-center mt-1">${item.name}</div>
+                    <div class="text-[10px] text-amber-300 font-mono">${item.price} 🪙</div>
+                    <button onclick="sellInventoryItem(${index})" class="mt-2 w-full bg-red-950/60 border border-red-500/30 text-red-300 text-[10px] font-bold py-1 rounded hover:bg-red-900 transition">Продать</button>
+                </div>
+            `).join('');
+        }
+
+        function prepareCaseOpen(caseId) {
+            const targetCase = CASES.find(c => c.id === caseId);
+            if (!targetCase) return;
+            const totalCost = targetCase.price * STATE.multiplier;
+            if (STATE.user.balance < totalCost) {
+                showToast(`НЕ ХВАТАЕТ ${(totalCost - STATE.user.balance).toFixed(2)} 🪙`);
+                return;
+            }
+            STATE.activeOpening = targetCase;
+            document.getElementById('opening-case-title').innerText = targetCase.name;
+            document.getElementById('spin-cost-display').innerText = totalCost;
+            document.getElementById('modal-case-opening').classList.remove('hidden');
+            populateRouletteTape();
+        }
+
+        function populateRouletteTape() {
+            const tape = document.getElementById('roulette-tape');
+            tape.style.transition = 'none';
+            tape.style.transform = 'translateX(0px)';
+            let itemsHTML = '';
+            for (let i = 0; i < 35; i++) {
+                const randomPet = PETS[Math.floor(Math.random() * PETS.length)];
+                itemsHTML += `
+                    <div class="w-20 h-20 bg-brainrot-card border border-purple-500/30 rounded-xl m-1 flex-shrink-0 flex flex-col items-center justify-center p-1">
+                        <div class="w-10 h-10">${randomPet.svg}</div>
+                        <div class="text-[8px] font-bold text-gray-300 truncate w-full text-center mt-1">${randomPet.name}</div>
+                    </div>
+                `;
+            }
+            tape.innerHTML = itemsHTML;
+        }
+
+        function setMultiplier(m) {
+            STATE.multiplier = m;
+            [1, 3, 5].forEach(val => {
+                const btn = document.getElementById(`mult-${val}`);
+                btn.className = val === m ? "px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-600 text-white border border-purple-400" : "px-2.5 py-1 rounded-lg text-xs font-bold bg-brainrot-bg text-gray-400 border border-brainrot-border";
+            });
+            if (STATE.activeOpening) {
+                document.getElementById('spin-cost-display').innerText = STATE.activeOpening.price * STATE.multiplier;
+            }
+        }
+
+        function toggleFastSpin() {
+            STATE.fastSpin = !STATE.fastSpin;
+            document.getElementById('btn-speed-toggle').innerText = STATE.fastSpin ? "▶▶ Пропустить" : "⚡ Медленно";
+        }
+
+        function spinRoulette() {
+            const cost = STATE.activeOpening.price * STATE.multiplier;
+            if (STATE.user.balance < cost) {
+                showToast(`НЕ ХВАТАЕТ ${(cost - STATE.user.balance).toFixed(2)} 🪙`);
+                return;
+            }
+            STATE.user.balance -= cost;
+            updateBalanceUI();
+
+            const tape = document.getElementById('roulette-tape');
+            const winningPet = PETS[Math.floor(Math.random() * PETS.length)];
+            const children = tape.children;
+            if (children[25]) {
+                children[25].innerHTML = `
+                    <div class="w-10 h-10">${winningPet.svg}</div>
+                    <div class="text-[8px] font-bold text-amber-300 truncate w-full text-center mt-1">${winningPet.name}</div>
+                `;
+            }
+            const spinDuration = STATE.fastSpin ? 0.3 : 2.5;
+            tape.style.transition = `transform ${spinDuration}s cubic-bezier(0.1, 0.9, 0.2, 1.0)`;
+            tape.style.transform = `translateX(-1800px)`;
+
+            setTimeout(() => {
+                document.getElementById('modal-case-opening').classList.add('hidden');
+                showWinModal(winningPet);
+            }, spinDuration * 1000 + 100);
+        }
+
+        function showWinModal(pet) {
+            STATE.currentWonPet = pet;
+            document.getElementById('win-pet-name').innerText = pet.name;
+            document.getElementById('win-pet-svg').innerHTML = pet.svg;
+            document.getElementById('win-pet-value').innerText = pet.price;
+            document.getElementById('btn-sell-win').innerText = `Продать сразу за ${pet.price} 🪙`;
+            document.getElementById('modal-reward-win').classList.remove('hidden');
+        }
+
+        function claimWonPetToInventory() {
+            if (STATE.currentWonPet) {
+                STATE.user.inventory.push(STATE.currentWonPet);
+                renderInventory();
+                showToast("Пет добавлен на склад!");
+            }
+            document.getElementById('modal-reward-win').classList.add('hidden');
+        }
+
+        function sellWonPetImmediately() {
+            if (STATE.currentWonPet) {
+                STATE.user.balance += STATE.currentWonPet.price;
+                updateBalanceUI();
+                showToast(`Продано за ${STATE.currentWonPet.price} 🪙`);
+            }
+            document.getElementById('modal-reward-win').classList.add('hidden');
+        }
+
+        function closeCaseModal() {
+            document.getElementById('modal-case-opening').classList.add('hidden');
+        }
+
+        function submitDepositRequest() {
+            if (STATE.depositSelected.length === 0) {
+                showToast("Выберите хотя бы одного брейнрота!");
+                return;
+            }
+            let total = 0;
+            STATE.depositSelected.forEach(id => {
+                const pet = PETS.find(p => p.id === id);
+                if (pet) total += pet.price;
+            });
+            document.getElementById('deposit-modal-total').innerText = total.toFixed(2);
+            document.getElementById('modal-deposit-confirm').classList.remove('hidden');
+        }
+
+        function confirmDepositSent() {
+            let total = 0;
+            const itemNames = STATE.depositSelected.map(id => {
+                const pet = PETS.find(p => p.id === id);
+                if (pet) total += pet.price;
+                return pet ? pet.name : '';
+            });
+
+            STATE.tradeRequests.push({
+                id: Date.now(),
+                user: STATE.user.username,
+                items: itemNames,
+                coins: total
+            });
+
+            renderAdminTradeRequests();
+            STATE.depositSelected = [];
+            document.getElementById('deposit-selected-count').innerText = "0";
+            renderDepositItems();
+            closeDepositModal();
+            showToast("Заявка отправлена администратору!");
+        }
+
+        function closeDepositModal() {
+            document.getElementById('modal-deposit-confirm').classList.add('hidden');
+        }
+
+        function openAdminModal() {
+            renderAdminTradeRequests();
+            populateAdminPetSelect();
+            document.getElementById('modal-admin').classList.remove('hidden');
+        }
+
+        function closeAdminModal() {
+            document.getElementById('modal-admin').classList.add('hidden');
+        }
+
+        function populateAdminPetSelect() {
+            const select = document.getElementById('admin-grant-pet-select');
+            select.innerHTML = PETS.map(p => `<option value="${p.id}">${p.name} (${p.price} 🪙)</option>`).join('');
+        }
+
+        function renderAdminTradeRequests() {
+            const container = document.getElementById('admin-trade-requests');
+            if (STATE.tradeRequests.length === 0) {
+                container.innerHTML = `<div class="text-[10px] text-gray-500">Нет активных трейд-запросов</div>`;
+                return;
+            }
+            container.innerHTML = STATE.tradeRequests.map(req => `
+                <div class="bg-brainrot-card border border-brainrot-border p-2 rounded text-xs space-y-1">
+                    <div class="flex justify-between text-[10px]">
+                        <span class="font-bold text-amber-300">${req.user}</span>
+                        <span class="text-green-400 font-mono">+${req.coins.toFixed(1)} 🪙</span>
+                    </div>
+                    <div class="text-[9px] text-gray-400 truncate">${req.items.join(', ')}</div>
+                    <div class="flex gap-1 pt-1">
+                        <button onclick="approveTrade(${req.id})" class="flex-1 bg-green-600 hover:bg-green-500 text-white text-[9px] font-bold py-1 rounded">🟢 ОДОБРИТЬ</button>
+                        <button onclick="rejectTrade(${req.id})" class="flex-1 bg-red-600 hover:bg-red-500 text-white text-[9px] font-bold py-1 rounded">🔴 ОТКЛОНИТЬ</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function approveTrade(reqId) {
+            const req = STATE.tradeRequests.find(r => r.id === reqId);
+            if (req) {
+                STATE.user.balance += req.coins;
+                updateBalanceUI();
+                showToast(`Трейд одобрен! Начислено ${req.coins} 🪙`);
+            }
+            STATE.tradeRequests = STATE.tradeRequests.filter(r => r.id !== reqId);
+            renderAdminTradeRequests();
+        }
+
+        function rejectTrade(reqId) {
+            STATE.tradeRequests = STATE.tradeRequests.filter(r => r.id !== reqId);
+            renderAdminTradeRequests();
+            showToast("Запрос отклонен");
+        }
+
+        function createAdminPromo() {
+            const name = document.getElementById('admin-promo-name').value;
+            const coins = document.getElementById('admin-promo-coins').value;
+            if (name && coins) {
+                showToast(`Промокод ${name} на ${coins}🪙 создан!`);
+                document.getElementById('admin-promo-name').value = '';
+                document.getElementById('admin-promo-coins').value = '';
+            }
+        }
+
+        function grantPetToUser() {
+            const petId = document.getElementById('admin-grant-pet-select').value;
+            const pet = PETS.find(p => p.id === petId);
+            if (pet) {
+                STATE.user.inventory.push(pet);
+                renderInventory();
+                showToast(`Пет ${pet.name} выдан!`);
+            }
+        }
+
+        function openGameModal(gameId) {
+            const modalBody = document.getElementById('game-modal-body');
+            if (gameId === 'upgrade') {
+                modalBody.innerHTML = `
+                    <div class="flex justify-between items-center border-b border-purple-500/30 pb-2">
+                        <h3 class="text-xs font-bold text-purple-200 uppercase font-pixel">🎡 Апгрейд</h3>
+                        <button onclick="closeGameModal()" class="text-gray-400 hover:text-white">✕</button>
+                    </div>
+                    <div class="flex flex-col items-center space-y-3">
+                        <div class="relative w-36 h-36 border-4 border-purple-500 rounded-full flex items-center justify-center shadow-lg">
+                            <div id="upgrade-needle" class="absolute top-1 w-1 h-16 bg-red-500 origin-bottom transition-transform duration-[2000ms]"></div>
+                            <span class="text-xs font-bold text-white z-10">ШАНС 50%</span>
+                        </div>
+                        <button onclick="playUpgrade()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 rounded-xl text-xs uppercase">КРУТИТЬ (10 🪙)</button>
+                    </div>
+                `;
+            } else if (gameId === 'crash') {
+                modalBody.innerHTML = `
+                    <div class="flex justify-between items-center border-b border-red-500/30 pb-2">
+                        <h3 class="text-xs font-bold text-red-200 uppercase font-pixel">🚀 Ракета (Crash)</h3>
+                        <button onclick="closeGameModal()" class="text-gray-400 hover:text-white">✕</button>
+                    </div>
+                    <div class="h-32 bg-brainrot-bg border border-red-500/30 rounded-xl flex items-center justify-center relative">
+                        <div id="crash-mult" class="text-3xl font-black text-red-400 font-mono">1.00x</div>
+                    </div>
+                    <button onclick="playCrash()" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl text-xs uppercase">СТАРТ (15 🪙)</button>
+                `;
+            } else if (gameId === 'mines') {
+                modalBody.innerHTML = `
+                    <div class="flex justify-between items-center border-b border-amber-500/30 pb-2">
+                        <h3 class="text-xs font-bold text-amber-200 uppercase font-pixel">💣 Мины (5x5)</h3>
+                        <button onclick="closeGameModal()" class="text-gray-400 hover:text-white">✕</button>
+                    </div>
+                    <div class="grid grid-cols-5 gap-1.5" id="mines-grid">
+                        ${Array(25).fill(0).map((_, i) => `<button onclick="stepMine(${i})" class="w-10 h-10 bg-brainrot-bg border border-amber-500/30 rounded-lg flex items-center justify-center text-sm">❓</button>`).join('')}
+                    </div>
+                `;
+            } else if (gameId === 'battles') {
+                modalBody.innerHTML = `
+                    <div class="flex justify-between items-center border-b border-indigo-500/30 pb-2">
+                        <h3 class="text-xs font-bold text-indigo-200 uppercase font-pixel">⚔️ PvP Coinflip</h3>
+                        <button onclick="closeGameModal()" class="text-gray-400 hover:text-white">✕</button>
+                    </div>
+                    <div class="flex flex-col items-center space-y-4 py-4">
+                        <div id="coin-3d" class="w-20 h-20 bg-amber-400 rounded-full border-4 border-amber-200 flex items-center justify-center text-2xl font-black text-black">🗿</div>
+                        <button onclick="playCoinflip()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs uppercase">БРОСИТЬ МОНЕТУ (20 🪙)</button>
+                    </div>
+                `;
+            } else {
+                modalBody.innerHTML = `
+                    <div class="flex justify-between items-center border-b border-brainrot-border pb-2">
+                        <h3 class="text-xs font-bold text-purple-200 uppercase font-pixel">Мини-Игра</h3>
+                        <button onclick="closeGameModal()" class="text-gray-400 hover:text-white">✕</button>
+                    </div>
+                    <div class="text-center py-6 text-xs text-gray-300">Режим симулирован. Нажмите Запустить!</div>
+                    <button onclick="closeGameModal()" class="w-full bg-purple-600 text-white font-bold py-2 rounded-xl text-xs">ИГРАТЬ</button>
+                `;
+            }
+            document.getElementById('modal-game').classList.remove('hidden');
+        }
+
+        function closeGameModal() {
+            document.getElementById('modal-game').classList.add('hidden');
+        }
+
+        function playUpgrade() {
+            if (STATE.user.balance < 10) { showToast("Не хватает монет!"); return; }
+            STATE.user.balance -= 10;
+            updateBalanceUI();
+            const needle = document.getElementById('upgrade-needle');
+            needle.style.transform = `rotate(${720 + Math.floor(Math.random() * 360)}deg)`;
+            setTimeout(() => {
+                if (Math.random() > 0.5) { STATE.user.balance += 20; showToast("ПОБЕДА! +20 🪙"); }
+                else showToast("НЕУДАЧА!");
+                updateBalanceUI();
+            }, 2000);
+        }
+
+        function playCrash() {
+            if (STATE.user.balance < 15) { showToast("Не хватает монет!"); return; }
+            STATE.user.balance -= 15;
+            updateBalanceUI();
+            let mult = 1.0;
+            const display = document.getElementById('crash-mult');
+            const interval = setInterval(() => {
+                mult += 0.1;
+                display.innerText = mult.toFixed(2) + 'x';
+                if (Math.random() < 0.15 || mult > 4.0) {
+                    clearInterval(interval);
+                    display.innerText = '💥 CRASH AT ' + mult.toFixed(2) + 'x';
+                    showToast(`Ракета улетела на ${mult.toFixed(2)}x`);
+                }
+            }, 200);
+        }
+
+        function stepMine(index) {
+            const btn = document.getElementById('mines-grid').children[index];
+            if (Math.random() > 0.3) {
+                btn.innerText = "💎";
+                btn.className = "w-10 h-10 bg-green-950 border border-green-500 rounded-lg flex items-center justify-center text-sm";
+                STATE.user.balance += 5;
+                updateBalanceUI();
+            } else {
+                btn.innerText = "💥";
+                btn.className = "w-10 h-10 bg-red-950 border border-red-500 rounded-lg flex items-center justify-center text-sm";
+                showToast("БОМБА! Игра сброшена");
+            }
+        }
+
+        function playCoinflip() {
+            if (STATE.user.balance < 20) { showToast("Не хватает монет!"); return; }
+            STATE.user.balance -= 20;
+            updateBalanceUI();
+            const coin = document.getElementById('coin-3d');
+            coin.style.transform = "rotateY(1440deg)";
+            setTimeout(() => {
+                const win = Math.random() > 0.5;
+                coin.innerText = win ? "🗿" : "🚽";
+                if (win) { STATE.user.balance += 40; showToast("Выиграла Sigma! +40 🪙"); }
+                else showToast("Выпал Skibidi! Проигрыш.");
+                updateBalanceUI();
+                coin.style.transform = "none";
+            }, 1500);
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-page').forEach(page => page.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            ['shop', 'deposit', 'profile'].forEach(t => {
+                const navBtn = document.getElementById(`nav-${t}`);
+                if (navBtn) {
+                    navBtn.className = t === tabId ? "flex flex-col items-center justify-center text-purple-400 font-bold" : "flex flex-col items-center justify-center text-gray-400 hover:text-gray-200";
+                }
+            });
+        }
+
+        function toggleAccordion(id) {
+            const el = document.getElementById(id);
+            const arrow = document.getElementById(`arrow-${id}`);
+            if (el.classList.contains('hidden')) {
+                el.classList.remove('hidden');
+                if (arrow) arrow.innerText = "▼";
+            } else {
+                el.classList.add('hidden');
+                if (arrow) arrow.innerText = "▶";
+            }
+        }
+
+        function initLiveMarquee() {
+            const marquee = document.getElementById('live-marquee');
+            let content = '';
+            for (let i = 0; i < 15; i++) {
+                const pet = PETS[i % PETS.length];
+                content += `
+                    <div class="flex items-center space-x-1.5 bg-brainrot-bg border border-brainrot-border px-2 py-0.5 rounded-full">
+                        <div class="w-4 h-4">${pet.svg}</div>
+                        <span class="text-gray-300 font-bold text-[9px]">${pet.name}</span>
+                    </div>
+                `;
+            }
+            marquee.innerHTML = content + content;
+        }
+
+        function sellInventoryItem(index) {
+            const item = STATE.user.inventory[index];
+            if (item) {
+                STATE.user.balance += item.price;
+                STATE.user.inventory.splice(index, 1);
+                updateBalanceUI();
+                renderInventory();
+                showToast(`Продано за ${item.price} 🪙`);
+            }
+        }
+
+        function sellAllInventory() {
+            let total = 0;
+            STATE.user.inventory.forEach(item => total += item.price);
+            STATE.user.balance += total;
+            STATE.user.inventory = [];
+            updateBalanceUI();
+            renderInventory();
+            showToast(`Всё продано за ${total.toFixed(1)} 🪙`);
+        }
+
+        function showToast(text) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-text').innerText = text;
+            toast.classList.remove('hidden');
+            setTimeout(() => { toast.classList.add('hidden'); }, 2500);
+        }
+
+        function openSettings() {
+            showToast("Настройки Mini App открыты");
+        }
+    </script>
+</body>
+</html>
